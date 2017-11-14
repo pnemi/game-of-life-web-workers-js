@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title></title>
+  <style media="screen">
+  .wrapper {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+  }
+  #canvas {
+    border: 1px solid black;
+    display: block;
+  }
+  </style>
+</head>
+<body>
+
+  <div class="wrapper">
+    <canvas id="canvas" width="400" height="400"></canvas>
+    <button id="start">Start</button>
+    <button id="stop">Stop</button>
+    <button id="reset">Reset</button>
+  </div>
+
+  <script>
+  (function() {
+    let c = document.getElementById("canvas");
+    let dpi = window.devicePixelRatio;
+    c.width *= dpi;
+    c.height *= dpi;
+    c.style.width = c.width / dpi + "px";
+    c.style.height = c.height / dpi + "px";
+
+    let ctx = c.getContext("2d");
+    let cellSize = 10; //px
+    let cellSizeDPI = 10 * dpi;
+    let canvasSize = c.width / dpi;
+    let canvasSizeDPI = c.width * dpi;
+
+    let toggleCellSize = cellSizeDPI - 2;
+
+    function drawLine(sx, sy, ex, ey) {
+      ctx.beginPath();
+      ctx.moveTo(sx, sy);
+      ctx.lineTo(ex, ey);
+      ctx.stroke();
+    }
+
+    function drawAxis() {
+      for (let i = cellSizeDPI; i < canvasSizeDPI; i += cellSizeDPI) {
+        drawLine(0, i, canvasSizeDPI, i);
+        drawLine(i, 0, i, canvasSizeDPI);
+      }
+    }
+
+    function toggleCell(col, row, isLiving) {
+      if (isLiving) {
+        ctx.fillRect(col * cellSizeDPI + 1,
+                     row * cellSizeDPI + 1,
+                     toggleCellSize,
+                     toggleCellSize);
+      } else {
+        ctx.clearRect(col * cellSizeDPI + 1,
+                      row * cellSizeDPI + 1,
+                      toggleCellSize,
+                      toggleCellSize);
+      }
+    }
+
+    ctx.strokeStyle = "#ccc";
+    drawAxis();
+    ctx.strokeStyle = "black";
+
+    let worker = new Worker("game-of-life-worker.js");
+    worker.postMessage(["setup", cellSize, canvasSize]);
+
+    worker.onmessage = function (e) {
+      // console.log(e.data);
+      toggleCell(e.data[0], e.data[1], e.data[2]); // col, row,
+    };
+
+    for (let msg of ["start", "stop", "reset"]) {
+      document.getElementById(msg).addEventListener("click", function () {
+        worker.postMessage([msg]);
+      });
+    }
+
+
+  }());
+  </script>
+
+</body>
+</html>
